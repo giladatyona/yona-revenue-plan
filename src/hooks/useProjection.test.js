@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useProjection, MONTHS, MARCH_REVENUE } from './useProjection';
+import { useProjection, MONTHS, MARCH_REVENUE, LAUNCH_MONTH_INDEX } from './useProjection';
 
 function computeExpected({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin }) {
   let lastOrders = MARCH_REVENUE / currentAov;
   return MONTHS.map((month, index) => {
     const isActual = index === 0;
-    const isPostLaunch = index >= 4;
+    const isPostLaunch = index >= LAUNCH_MONTH_INDEX;
     let orders;
     if (isActual) {
       orders = MARCH_REVENUE / currentAov;
