@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { TrendingUp, Globe, Percent, Zap, Sparkles, Target, MessageSquare } from 'lucide-react';
+import { TrendingUp, Globe, Percent, Target, MessageSquare } from 'lucide-react';
 import { useProjection, MARCH_REVENUE } from './hooks/useProjection';
-import { generateStrategy } from './lib/generateStrategy';
 import { RevenueChart } from './components/RevenueChart';
 import { ProfitChart } from './components/ProfitChart';
 
@@ -11,25 +10,10 @@ function App() {
   const [futureAov, setFutureAov] = useState(350);
   const [auMargin, setAuMargin] = useState(8);
   const [usMargin, setUsMargin] = useState(6);
-  const [strategyLines, setStrategyLines] = useState(null);
 
   const data = useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin });
   const decData = data[data.length - 1];
   const blendedMargin = ((decData.Profit / decData.Total) * 100).toFixed(1);
-
-  const handleGenerateStrategy = () => {
-    const lines = generateStrategy({
-      monthlyGrowth,
-      currentAov,
-      futureAov,
-      auMargin,
-      usMargin,
-      marRevenue: MARCH_REVENUE,
-      decRevenue: decData.Total,
-      decMargin: parseFloat(blendedMargin),
-    });
-    setStrategyLines(lines);
-  };
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-12 font-sans text-slate-900">
@@ -51,27 +35,6 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
 
           <div className="space-y-10">
-            <section className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-black uppercase tracking-widest text-indigo-600 flex items-center gap-2">
-                  <Sparkles size={14} /> AI Strategist
-                </h3>
-              </div>
-              <button
-                onClick={handleGenerateStrategy}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-200"
-              >
-                <Zap size={16} aria-hidden="true" />
-                <span aria-hidden="true">✨</span> Generate Scale Strategy
-              </button>
-
-              {strategyLines && (
-                <div className="mt-4 p-4 bg-white/80 rounded-2xl text-[11px] leading-relaxed text-slate-700 border border-indigo-100 max-h-[200px] overflow-y-auto whitespace-pre-wrap font-medium space-y-2">
-                  {strategyLines.map((line, i) => <p key={i}>{line}</p>)}
-                </div>
-              )}
-            </section>
-
             <section>
               <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
                 <TrendingUp size={14} /> Revenue Levers
@@ -168,7 +131,7 @@ function App() {
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-800 tracking-tight">Need a customized marketing breakdown?</p>
-                <p className="text-xs text-slate-500">The Strategist considers your current margins to suggest where to deploy capital.</p>
+                <p className="text-xs text-slate-500">Adjust the levers on the left to model different growth and margin scenarios.</p>
               </div>
             </div>
           </div>
