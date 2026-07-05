@@ -37,7 +37,7 @@ function App() {
 
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight">2024 SCALE PLAN</h1>
+            <h1 className="text-4xl font-black tracking-tight">YONA SCALE PLAN — 2026</h1>
             <p className="text-slate-500 font-medium flex items-center gap-2">
               <Globe size={16} /> AU (60%) / US (40%) Split • Baseline: ${MARCH_REVENUE.toLocaleString()}
             </p>
