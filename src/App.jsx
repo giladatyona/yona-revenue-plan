@@ -1,19 +1,37 @@
 import { useState } from 'react';
 import { TrendingUp, Globe, Percent, Target, MessageSquare } from 'lucide-react';
-import { useProjection, MARCH_REVENUE } from './hooks/useProjection';
+import { useProjection, MARCH_REVENUE, MONTHS } from './hooks/useProjection';
+import { getUnlockedMonths } from './lib/getUnlockedMonths';
+import { getActualRows } from './lib/getActualRows';
 import { RevenueChart } from './components/RevenueChart';
 import { ProfitChart } from './components/ProfitChart';
+
+const STEP_CHANGE_MONTH_OPTIONS = MONTHS.map((month, index) => ({ month, index })).slice(1);
 
 function App() {
   const [monthlyGrowth, setMonthlyGrowth] = useState(4.8);
   const [currentAov, setCurrentAov] = useState(235);
   const [futureAov, setFutureAov] = useState(350);
+  const [launchMonthIndex, setLaunchMonthIndex] = useState(4);
   const [auMargin, setAuMargin] = useState(8);
   const [usMargin, setUsMargin] = useState(6);
+  const [activeTab, setActiveTab] = useState('prediction');
+  const [actuals, setActuals] = useState({});
 
-  const data = useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin });
+  const data = useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex });
   const decData = data[data.length - 1];
   const blendedMargin = ((decData.Profit / decData.Total) * 100).toFixed(1);
+
+  const unlockedMonths = getUnlockedMonths();
+  const actualRows = getActualRows(actuals);
+  const unlockedMonthNames = MONTHS.filter((month) => unlockedMonths[month]);
+
+  const updateActual = (month, field, value) => {
+    setActuals((prev) => ({
+      ...prev,
+      [month]: { ...prev[month], [field]: value === '' ? undefined : Number(value) },
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-12 font-sans text-slate-900">
@@ -63,6 +81,19 @@ function App() {
                       <input type="number" value={futureAov} onChange={(e) => setFutureAov(Number(e.target.value))} aria-label="Post-July Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600" />
                     </div>
                   </div>
+                  <div className="mt-4">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Step-Change Month</p>
+                    <select
+                      value={launchMonthIndex}
+                      onChange={(e) => setLaunchMonthIndex(Number(e.target.value))}
+                      aria-label="AOV Step-Change Month"
+                      className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold"
+                    >
+                      {STEP_CHANGE_MONTH_OPTIONS.map(({ month, index }) => (
+                        <option key={month} value={index}>{month}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </section>
@@ -105,19 +136,81 @@ function App() {
           </div>
 
           <div className="lg:col-span-2 space-y-12">
-            <div className="h-[350px] w-full">
+            <div>
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-sm font-bold text-slate-400 uppercase">Revenue Growth Projection</h3>
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> AU
+                <div className="flex items-center gap-4">
+                  <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setActiveTab('prediction')}
+                      className={`text-[10px] font-bold uppercase px-3 py-1 rounded-md transition-all ${activeTab === 'prediction' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                    >
+                      Prediction
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('actual')}
+                      className={`text-[10px] font-bold uppercase px-3 py-1 rounded-md transition-all ${activeTab === 'actual' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                    >
+                      Actual
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span> US
+                  <div className="flex gap-4">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span> AU
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span> US
+                    </div>
                   </div>
                 </div>
               </div>
-              <RevenueChart data={data} />
+
+              {activeTab === 'prediction' && (
+                <div className="h-[350px] w-full">
+                  <RevenueChart data={data} />
+                </div>
+              )}
+
+              {activeTab === 'actual' && (
+                <div>
+                  {actualRows.length > 0 ? (
+                    <div className="h-[350px] w-full">
+                      <RevenueChart data={actualRows} />
+                    </div>
+                  ) : (
+                    <div className="h-[100px] flex items-center justify-center text-sm text-slate-400 font-medium">
+                      No actuals entered yet — fill in a month below.
+                    </div>
+                  )}
+
+                  <div className="mt-6 space-y-3">
+                    {unlockedMonthNames.length === 0 && (
+                      <p className="text-xs text-slate-400 font-medium">No months are unlocked yet.</p>
+                    )}
+                    {unlockedMonthNames.map((month) => (
+                      <div key={month} className="grid grid-cols-3 gap-3 items-center">
+                        <span className="text-xs font-bold text-slate-500">{month}</span>
+                        <input
+                          type="number"
+                          placeholder="AU actual"
+                          value={actuals[month]?.au ?? ''}
+                          onChange={(e) => updateActual(month, 'au', e.target.value)}
+                          aria-label={`${month} Australia Actual Revenue`}
+                          className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold"
+                        />
+                        <input
+                          type="number"
+                          placeholder="US actual"
+                          value={actuals[month]?.us ?? ''}
+                          onChange={(e) => updateActual(month, 'us', e.target.value)}
+                          aria-label={`${month} United States Actual Revenue`}
+                          className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="h-[200px] w-full">

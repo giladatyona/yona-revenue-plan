@@ -6,13 +6,13 @@ export const LAUNCH_MONTH_INDEX = 4;
 const AU_SHARE = 0.6;
 const US_SHARE = 0.4;
 
-export function useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin }) {
+export function useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex = LAUNCH_MONTH_INDEX }) {
   return useMemo(() => {
     let lastOrders = MARCH_REVENUE / currentAov;
 
     return MONTHS.map((month, index) => {
       const isActual = index === 0;
-      const isPostLaunch = index >= LAUNCH_MONTH_INDEX;
+      const isPostLaunch = index >= launchMonthIndex;
 
       let orders;
       if (isActual) {
@@ -40,5 +40,5 @@ export function useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, 
         isActual,
       };
     });
-  }, [monthlyGrowth, currentAov, futureAov, auMargin, usMargin]);
+  }, [monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex]);
 }

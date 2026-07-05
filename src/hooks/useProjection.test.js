@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useProjection, MONTHS, MARCH_REVENUE, LAUNCH_MONTH_INDEX } from './useProjection';
 
-function computeExpected({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin }) {
+function computeExpected({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex = LAUNCH_MONTH_INDEX }) {
   let lastOrders = MARCH_REVENUE / currentAov;
   return MONTHS.map((month, index) => {
     const isActual = index === 0;
-    const isPostLaunch = index >= LAUNCH_MONTH_INDEX;
+    const isPostLaunch = index >= launchMonthIndex;
     let orders;
     if (isActual) {
       orders = MARCH_REVENUE / currentAov;
@@ -69,5 +69,22 @@ describe('useProjection', () => {
 
     const julToDec = result.current.slice(4).map(r => r.Total);
     expect(julToDec).toEqual([527234, 527234, 527234, 527234, 527234, 527234]);
+  });
+
+  it('honors a custom launchMonthIndex for the AOV step-change', () => {
+    const inputs = { monthlyGrowth: 0, currentAov: 235, futureAov: 350, auMargin: 8, usMargin: 6, launchMonthIndex: 9 };
+    const { result } = renderHook(() => useProjection(inputs));
+
+    // With launchMonthIndex 9 (Dec), every month except Dec should still use currentAov.
+    const marToNov = result.current.slice(0, 9).map(r => r.Total);
+    expect(marToNov).toEqual(new Array(9).fill(354000));
+
+    expect(result.current[9].Total).toBe(527234);
+  });
+
+  it('matches an independently computed projection for a custom launchMonthIndex', () => {
+    const inputs = { monthlyGrowth: 9.2, currentAov: 180, futureAov: 400, auMargin: 3.5, usMargin: 12, launchMonthIndex: 2 };
+    const { result } = renderHook(() => useProjection(inputs));
+    expect(result.current).toEqual(computeExpected(inputs));
   });
 });
