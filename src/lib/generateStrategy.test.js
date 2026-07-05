@@ -46,6 +46,11 @@ describe('generateStrategy', () => {
     expect(marginLine).toMatch(/US margin/);
   });
 
+  it('notes parity when AU and US margins are equal', () => {
+    const [, , marginLine] = generateStrategy({ ...base, auMargin: 8, usMargin: 8 });
+    expect(marginLine).toMatch(/matched|parity/i);
+  });
+
   it('includes the December revenue and blended margin in the final line', () => {
     const lines = generateStrategy(base);
     expect(lines[3]).toContain('700,000');
