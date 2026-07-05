@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useProjection } from './useProjection';
-
-const MONTHS = ["Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const MARCH_REVENUE = 354000;
+import { useProjection, MONTHS, MARCH_REVENUE } from './useProjection';
 
 function computeExpected({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin }) {
   let lastOrders = MARCH_REVENUE / currentAov;
@@ -58,5 +55,19 @@ describe('useProjection', () => {
     const inputs = { monthlyGrowth: 9.2, currentAov: 180, futureAov: 400, auMargin: 3.5, usMargin: 12 };
     const { result } = renderHook(() => useProjection(inputs));
     expect(result.current).toEqual(computeExpected(inputs));
+  });
+
+  it('applies the AOV step-change in July using hand-computed values, independent of the compounding algorithm', () => {
+    // With 0% growth, orders never change from the March baseline, so this isolates the AOV
+    // step-change from the compounding logic: Mar-Jun should equal the March baseline exactly,
+    // and Jul-Dec should equal marchOrders * futureAov (354000 / 235 * 350 = 527234, hand-computed).
+    const inputs = { monthlyGrowth: 0, currentAov: 235, futureAov: 350, auMargin: 8, usMargin: 6 };
+    const { result } = renderHook(() => useProjection(inputs));
+
+    const marToJun = result.current.slice(0, 4).map(r => r.Total);
+    expect(marToJun).toEqual([354000, 354000, 354000, 354000]);
+
+    const julToDec = result.current.slice(4).map(r => r.Total);
+    expect(julToDec).toEqual([527234, 527234, 527234, 527234, 527234, 527234]);
   });
 });
