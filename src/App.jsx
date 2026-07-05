@@ -73,12 +73,12 @@ function App() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Pre-July</p>
-                      <input type="number" value={currentAov} onChange={(e) => setCurrentAov(Number(e.target.value))} aria-label="Pre-July Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold" />
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Pre Step-Change</p>
+                      <input type="number" value={currentAov} onChange={(e) => setCurrentAov(Number(e.target.value))} aria-label="Pre Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Post-July</p>
-                      <input type="number" value={futureAov} onChange={(e) => setFutureAov(Number(e.target.value))} aria-label="Post-July Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600" />
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Post Step-Change</p>
+                      <input type="number" value={futureAov} onChange={(e) => setFutureAov(Number(e.target.value))} aria-label="Post Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600" />
                     </div>
                   </div>
                   <div className="mt-4">
