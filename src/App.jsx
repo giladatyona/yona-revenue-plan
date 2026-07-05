@@ -61,8 +61,8 @@ function App() {
                 onClick={handleGenerateStrategy}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-200"
               >
-                <Zap size={16} />
-                ✨ Generate Scale Strategy
+                <Zap size={16} aria-hidden="true" />
+                <span aria-hidden="true">✨</span> Generate Scale Strategy
               </button>
 
               {strategyLines && (
@@ -82,7 +82,7 @@ function App() {
                     <span>Order Growth (MoM)</span>
                     <span className="text-blue-600">{monthlyGrowth}%</span>
                   </div>
-                  <input type="range" min="0" max="15" step="0.1" value={monthlyGrowth} onChange={(e) => setMonthlyGrowth(parseFloat(e.target.value))} className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                  <input type="range" min="0" max="15" step="0.1" value={monthlyGrowth} onChange={(e) => setMonthlyGrowth(parseFloat(e.target.value))} aria-label="Order Growth Month over Month" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
                 </div>
 
                 <div className="pt-4 border-t border-slate-50">
@@ -93,11 +93,11 @@ function App() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Pre-July</p>
-                      <input type="number" value={currentAov} onChange={(e) => setCurrentAov(Number(e.target.value))} className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold" />
+                      <input type="number" value={currentAov} onChange={(e) => setCurrentAov(Number(e.target.value))} aria-label="Pre-July Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold" />
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Post-July</p>
-                      <input type="number" value={futureAov} onChange={(e) => setFutureAov(Number(e.target.value))} className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600" />
+                      <input type="number" value={futureAov} onChange={(e) => setFutureAov(Number(e.target.value))} aria-label="Post-July Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600" />
                     </div>
                   </div>
                 </div>
@@ -114,14 +114,14 @@ function App() {
                     <span>AU Margin</span>
                     <span className="text-emerald-600">{auMargin}%</span>
                   </div>
-                  <input type="range" min="0" max="20" step="0.5" value={auMargin} onChange={(e) => setAuMargin(parseFloat(e.target.value))} className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+                  <input type="range" min="0" max="20" step="0.5" value={auMargin} onChange={(e) => setAuMargin(parseFloat(e.target.value))} aria-label="Australia Net Profit Margin" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
                 </div>
                 <div>
                   <div className="flex justify-between mb-3 text-sm font-bold">
                     <span>US Margin</span>
                     <span className="text-blue-500">{usMargin}%</span>
                   </div>
-                  <input type="range" min="0" max="20" step="0.5" value={usMargin} onChange={(e) => setUsMargin(parseFloat(e.target.value))} className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                  <input type="range" min="0" max="20" step="0.5" value={usMargin} onChange={(e) => setUsMargin(parseFloat(e.target.value))} aria-label="United States Net Profit Margin" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-500" />
                 </div>
               </div>
             </section>
