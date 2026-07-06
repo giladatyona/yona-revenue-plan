@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 .superpowers/
+.claude/scheduled_tasks.lock
 
 # Editor directories and files
 .vscode/*

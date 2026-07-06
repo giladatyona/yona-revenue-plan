@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc } from 'firebase/firestore';
+import { getFirestore, doc, collection } from 'firebase/firestore';
 
 // Firebase web config is meant to be public -- security is enforced by Firestore
 // rules (see firestore rules restricting access to the single `app/state` doc),
@@ -16,3 +16,4 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const sharedStateDoc = doc(db, 'app', 'state');
+export const plansCollection = collection(db, 'plans');

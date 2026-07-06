@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { TrendingUp, Globe, Percent, Target, MessageSquare } from 'lucide-react';
+import { TrendingUp, Globe, Percent, Target, MessageSquare, Save, Library, Trash2 } from 'lucide-react';
 import { useProjection, MARCH_REVENUE, MONTHS } from './hooks/useProjection';
 import { useSharedState } from './hooks/useSharedState';
+import { useSavedPlans } from './hooks/useSavedPlans';
 import { getUnlockedMonths } from './lib/getUnlockedMonths';
 import { getActualRows } from './lib/getActualRows';
 import { RevenueChart } from './components/RevenueChart';
 import { ProfitChart } from './components/ProfitChart';
+
+const PLAN_FIELDS = ['monthlyGrowth', 'currentAov', 'futureAov', 'launchMonthIndex', 'auMargin', 'usMargin', 'actuals'];
 
 const STEP_CHANGE_MONTH_OPTIONS = MONTHS.map((month, index) => ({ month, index })).slice(1);
 
@@ -23,6 +26,8 @@ function App() {
   const [shared, updateShared, isLoaded] = useSharedState(DEFAULT_SHARED_STATE);
   const { monthlyGrowth, currentAov, futureAov, launchMonthIndex, auMargin, usMargin, actuals } = shared;
   const [activeTab, setActiveTab] = useState('prediction');
+  const { plans, savePlan, deletePlan } = useSavedPlans();
+  const [planName, setPlanName] = useState('');
 
   const data = useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex });
   const decData = data[data.length - 1];
@@ -39,6 +44,18 @@ function App() {
         [month]: { ...actuals[month], [field]: value === '' ? undefined : Number(value) },
       },
     });
+  };
+
+  const handleSavePlan = () => {
+    if (!planName.trim()) return;
+    const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, shared[field]]));
+    savePlan(planName.trim(), snapshot);
+    setPlanName('');
+  };
+
+  const handleLoadPlan = (plan) => {
+    const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, plan[field]]));
+    updateShared(snapshot);
   };
 
   if (!isLoaded) {
@@ -149,6 +166,29 @@ function App() {
                 </div>
               </div>
             </div>
+
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+                <Save size={14} /> Save This Plan
+              </h3>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={planName}
+                  onChange={(e) => setPlanName(e.target.value)}
+                  placeholder="Plan name"
+                  aria-label="Plan Name"
+                  className="flex-1 bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold min-w-0"
+                />
+                <button
+                  onClick={handleSavePlan}
+                  disabled={!planName.trim()}
+                  className="bg-slate-900 hover:bg-slate-700 disabled:bg-slate-200 text-white rounded-lg px-4 text-xs font-bold uppercase whitespace-nowrap"
+                >
+                  Save
+                </button>
+              </div>
+            </section>
           </div>
 
           <div className="lg:col-span-2 space-y-12">
@@ -246,6 +286,44 @@ function App() {
           </div>
 
         </div>
+
+        <div className="mt-12 pt-8 border-t border-slate-100">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+            <Library size={14} /> Saved Plans
+          </h3>
+          {plans.length === 0 ? (
+            <p className="text-sm text-slate-400 font-medium">No plans saved yet — name and save one above.</p>
+          ) : (
+            <div className="space-y-3">
+              {plans.map((plan) => (
+                <div key={plan.id} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">{plan.name}</p>
+                    <p className="text-xs text-slate-400">
+                      Saved {new Date(plan.savedAt).toLocaleString()} • {plan.monthlyGrowth}% growth • ${plan.currentAov}→${plan.futureAov} AOV • AU {plan.auMargin}% / US {plan.usMargin}%
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => handleLoadPlan(plan)}
+                      className="text-xs font-bold uppercase bg-white border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-100"
+                    >
+                      Load
+                    </button>
+                    <button
+                      onClick={() => deletePlan(plan.id)}
+                      aria-label={`Delete plan ${plan.name}`}
+                      className="text-xs font-bold uppercase bg-white border border-slate-200 rounded-lg px-3 py-2 text-red-500 hover:bg-red-50"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
