@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TrendingUp, Globe, Percent, Target, MessageSquare } from 'lucide-react';
 import { useProjection, MARCH_REVENUE, MONTHS } from './hooks/useProjection';
+import { useSharedState } from './hooks/useSharedState';
 import { getUnlockedMonths } from './lib/getUnlockedMonths';
 import { getActualRows } from './lib/getActualRows';
 import { RevenueChart } from './components/RevenueChart';
@@ -8,15 +9,20 @@ import { ProfitChart } from './components/ProfitChart';
 
 const STEP_CHANGE_MONTH_OPTIONS = MONTHS.map((month, index) => ({ month, index })).slice(1);
 
+const DEFAULT_SHARED_STATE = {
+  monthlyGrowth: 4.8,
+  currentAov: 235,
+  futureAov: 350,
+  launchMonthIndex: 4,
+  auMargin: 8,
+  usMargin: 6,
+  actuals: {},
+};
+
 function App() {
-  const [monthlyGrowth, setMonthlyGrowth] = useState(4.8);
-  const [currentAov, setCurrentAov] = useState(235);
-  const [futureAov, setFutureAov] = useState(350);
-  const [launchMonthIndex, setLaunchMonthIndex] = useState(4);
-  const [auMargin, setAuMargin] = useState(8);
-  const [usMargin, setUsMargin] = useState(6);
+  const [shared, updateShared, isLoaded] = useSharedState(DEFAULT_SHARED_STATE);
+  const { monthlyGrowth, currentAov, futureAov, launchMonthIndex, auMargin, usMargin, actuals } = shared;
   const [activeTab, setActiveTab] = useState('prediction');
-  const [actuals, setActuals] = useState({});
 
   const data = useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex });
   const decData = data[data.length - 1];
@@ -27,11 +33,21 @@ function App() {
   const unlockedMonthNames = MONTHS.filter((month) => unlockedMonths[month]);
 
   const updateActual = (month, field, value) => {
-    setActuals((prev) => ({
-      ...prev,
-      [month]: { ...prev[month], [field]: value === '' ? undefined : Number(value) },
-    }));
+    updateShared({
+      actuals: {
+        ...actuals,
+        [month]: { ...actuals[month], [field]: value === '' ? undefined : Number(value) },
+      },
+    });
   };
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center text-sm text-slate-400 font-medium">
+        Loading shared plan...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-12 font-sans text-slate-900">
@@ -63,7 +79,7 @@ function App() {
                     <span>Order Growth (MoM)</span>
                     <span className="text-blue-600">{monthlyGrowth}%</span>
                   </div>
-                  <input type="range" min="0" max="15" step="0.1" value={monthlyGrowth} onChange={(e) => setMonthlyGrowth(parseFloat(e.target.value))} aria-label="Order Growth Month over Month" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                  <input type="range" min="0" max="15" step="0.1" value={monthlyGrowth} onChange={(e) => updateShared({ monthlyGrowth: parseFloat(e.target.value) })} aria-label="Order Growth Month over Month" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
                 </div>
 
                 <div className="pt-4 border-t border-slate-50">
@@ -74,18 +90,18 @@ function App() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Pre Step-Change</p>
-                      <input type="number" value={currentAov} onChange={(e) => setCurrentAov(Number(e.target.value))} aria-label="Pre Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold" />
+                      <input type="number" value={currentAov} onChange={(e) => updateShared({ currentAov: Number(e.target.value) })} aria-label="Pre Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold" />
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Post Step-Change</p>
-                      <input type="number" value={futureAov} onChange={(e) => setFutureAov(Number(e.target.value))} aria-label="Post Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600" />
+                      <input type="number" value={futureAov} onChange={(e) => updateShared({ futureAov: Number(e.target.value) })} aria-label="Post Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600" />
                     </div>
                   </div>
                   <div className="mt-4">
                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Step-Change Month</p>
                     <select
                       value={launchMonthIndex}
-                      onChange={(e) => setLaunchMonthIndex(Number(e.target.value))}
+                      onChange={(e) => updateShared({ launchMonthIndex: Number(e.target.value) })}
                       aria-label="AOV Step-Change Month"
                       className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold"
                     >
@@ -108,14 +124,14 @@ function App() {
                     <span>AU Margin</span>
                     <span className="text-emerald-600">{auMargin}%</span>
                   </div>
-                  <input type="range" min="0" max="20" step="0.5" value={auMargin} onChange={(e) => setAuMargin(parseFloat(e.target.value))} aria-label="Australia Net Profit Margin" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+                  <input type="range" min="0" max="20" step="0.5" value={auMargin} onChange={(e) => updateShared({ auMargin: parseFloat(e.target.value) })} aria-label="Australia Net Profit Margin" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
                 </div>
                 <div>
                   <div className="flex justify-between mb-3 text-sm font-bold">
                     <span>US Margin</span>
                     <span className="text-blue-500">{usMargin}%</span>
                   </div>
-                  <input type="range" min="0" max="20" step="0.5" value={usMargin} onChange={(e) => setUsMargin(parseFloat(e.target.value))} aria-label="United States Net Profit Margin" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                  <input type="range" min="0" max="20" step="0.5" value={usMargin} onChange={(e) => updateShared({ usMargin: parseFloat(e.target.value) })} aria-label="United States Net Profit Margin" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-500" />
                 </div>
               </div>
             </section>
