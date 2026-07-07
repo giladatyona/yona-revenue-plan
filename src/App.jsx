@@ -112,7 +112,19 @@ function App() {
                 <div>
                   <div className="flex justify-between mb-3 text-sm font-bold">
                     <span>Order Growth (MoM)</span>
-                    <span className="text-blue-600">{monthlyGrowth.toFixed(2)}%</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="15"
+                        step="0.01"
+                        value={monthlyGrowth}
+                        onChange={(e) => updateShared({ monthlyGrowth: parseFloat(e.target.value) })}
+                        aria-label="Order Growth Month over Month Exact Value"
+                        className="w-16 bg-slate-50 border-0 rounded-lg p-1 text-sm font-bold text-blue-600 text-right"
+                      />
+                      <span className="text-blue-600">%</span>
+                    </div>
                   </div>
                   <input type="range" min="0" max="15" step="0.01" value={monthlyGrowth} onChange={(e) => updateShared({ monthlyGrowth: parseFloat(e.target.value) })} aria-label="Order Growth Month over Month" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
                 </div>
