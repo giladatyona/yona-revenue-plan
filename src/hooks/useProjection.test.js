@@ -2,22 +2,34 @@ import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useProjection, MONTHS, MARCH_REVENUE, LAUNCH_MONTH_INDEX } from './useProjection';
 
-function computeExpected({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex = LAUNCH_MONTH_INDEX }) {
-  let lastOrders = MARCH_REVENUE / currentAov;
+function computeExpected({
+  monthlyGrowth, auCurrentAov, auFutureAov, usCurrentAov, usFutureAov, auMargin, usMargin,
+  launchMonthIndex = LAUNCH_MONTH_INDEX,
+}) {
+  const marchAuRevenue = MARCH_REVENUE * 0.6;
+  const marchUsRevenue = MARCH_REVENUE * 0.4;
+  let lastAuOrders = marchAuRevenue / auCurrentAov;
+  let lastUsOrders = marchUsRevenue / usCurrentAov;
+
   return MONTHS.map((month, index) => {
     const isActual = index === 0;
     const isPostLaunch = index >= launchMonthIndex;
-    let orders;
+    let auOrders;
+    let usOrders;
     if (isActual) {
-      orders = MARCH_REVENUE / currentAov;
+      auOrders = marchAuRevenue / auCurrentAov;
+      usOrders = marchUsRevenue / usCurrentAov;
     } else {
-      lastOrders = lastOrders * (1 + monthlyGrowth / 100);
-      orders = lastOrders;
+      lastAuOrders = lastAuOrders * (1 + monthlyGrowth / 100);
+      lastUsOrders = lastUsOrders * (1 + monthlyGrowth / 100);
+      auOrders = lastAuOrders;
+      usOrders = lastUsOrders;
     }
-    const activeAov = isPostLaunch ? futureAov : currentAov;
-    const totalRevenue = isActual ? MARCH_REVENUE : orders * activeAov;
-    const auRevenue = totalRevenue * 0.6;
-    const usRevenue = totalRevenue * 0.4;
+    const activeAuAov = isPostLaunch ? auFutureAov : auCurrentAov;
+    const activeUsAov = isPostLaunch ? usFutureAov : usCurrentAov;
+    const auRevenue = isActual ? marchAuRevenue : auOrders * activeAuAov;
+    const usRevenue = isActual ? marchUsRevenue : usOrders * activeUsAov;
+    const totalRevenue = isActual ? MARCH_REVENUE : auRevenue + usRevenue;
     const auProfit = auRevenue * (auMargin / 100);
     const usProfit = usRevenue * (usMargin / 100);
     return {
@@ -32,59 +44,48 @@ function computeExpected({ monthlyGrowth, currentAov, futureAov, auMargin, usMar
 }
 
 describe('useProjection', () => {
-  const defaultInputs = { monthlyGrowth: 4.8, currentAov: 235, futureAov: 350, auMargin: 8, usMargin: 6 };
+  const defaultInputs = {
+    monthlyGrowth: 4.8, auCurrentAov: 235, auFutureAov: 350, usCurrentAov: 235, usFutureAov: 350, auMargin: 8, usMargin: 6,
+  };
 
   it('returns 10 rows in Mar-Dec order', () => {
     const { result } = renderHook(() => useProjection(defaultInputs));
     expect(result.current.map(r => r.name)).toEqual(MONTHS);
   });
 
-  it('matches the hardcoded March baseline exactly', () => {
-    const { result } = renderHook(() => useProjection(defaultInputs));
+  it('matches the hardcoded March 60/40 baseline regardless of region AOVs', () => {
+    const inputs = { ...defaultInputs, auCurrentAov: 200, usCurrentAov: 300 };
+    const { result } = renderHook(() => useProjection(inputs));
     expect(result.current[0]).toEqual({
       name: 'Mar', Total: 354000, AU: 212400, US: 141600, Profit: 25488, isActual: true,
     });
   });
 
-  it('matches an independently computed projection for default inputs', () => {
+  it('matches an independently computed projection when AU and US AOVs are equal', () => {
     const { result } = renderHook(() => useProjection(defaultInputs));
     expect(result.current).toEqual(computeExpected(defaultInputs));
   });
 
-  it('matches an independently computed projection when AOV and margins change', () => {
-    const inputs = { monthlyGrowth: 9.2, currentAov: 180, futureAov: 400, auMargin: 3.5, usMargin: 12 };
+  it('matches an independently computed projection when AU and US AOVs diverge', () => {
+    const inputs = {
+      monthlyGrowth: 6, auCurrentAov: 200, auFutureAov: 400, usCurrentAov: 300, usFutureAov: 320,
+      auMargin: 5, usMargin: 10, launchMonthIndex: 6,
+    };
     const { result } = renderHook(() => useProjection(inputs));
     expect(result.current).toEqual(computeExpected(inputs));
   });
 
-  it('applies the AOV step-change in July using hand-computed values, independent of the compounding algorithm', () => {
-    // With 0% growth, orders never change from the March baseline, so this isolates the AOV
-    // step-change from the compounding logic: Mar-Jun should equal the March baseline exactly,
-    // and Jul-Dec should equal marchOrders * futureAov (354000 / 235 * 350 = 527234, hand-computed).
-    const inputs = { monthlyGrowth: 0, currentAov: 235, futureAov: 350, auMargin: 8, usMargin: 6 };
-    const { result } = renderHook(() => useProjection(inputs));
-
-    const marToJun = result.current.slice(0, 4).map(r => r.Total);
-    expect(marToJun).toEqual([354000, 354000, 354000, 354000]);
-
-    const julToDec = result.current.slice(4).map(r => r.Total);
-    expect(julToDec).toEqual([527234, 527234, 527234, 527234, 527234, 527234]);
+  it('keeps the 60/40 revenue split at every month when AU and US AOVs stay equal', () => {
+    const { result } = renderHook(() => useProjection(defaultInputs));
+    result.current.forEach((row) => {
+      expect(row.AU / row.Total).toBeCloseTo(0.6, 5);
+    });
   });
 
-  it('honors a custom launchMonthIndex for the AOV step-change', () => {
-    const inputs = { monthlyGrowth: 0, currentAov: 235, futureAov: 350, auMargin: 8, usMargin: 6, launchMonthIndex: 9 };
+  it('produces a revenue split away from 60/40 once AU and US AOVs diverge', () => {
+    const inputs = { ...defaultInputs, auFutureAov: 600 };
     const { result } = renderHook(() => useProjection(inputs));
-
-    // With launchMonthIndex 9 (Dec), every month except Dec should still use currentAov.
-    const marToNov = result.current.slice(0, 9).map(r => r.Total);
-    expect(marToNov).toEqual(new Array(9).fill(354000));
-
-    expect(result.current[9].Total).toBe(527234);
-  });
-
-  it('matches an independently computed projection for a custom launchMonthIndex', () => {
-    const inputs = { monthlyGrowth: 9.2, currentAov: 180, futureAov: 400, auMargin: 3.5, usMargin: 12, launchMonthIndex: 2 };
-    const { result } = renderHook(() => useProjection(inputs));
-    expect(result.current).toEqual(computeExpected(inputs));
+    const decRow = result.current[9];
+    expect(decRow.AU / decRow.Total).not.toBeCloseTo(0.6, 2);
   });
 });

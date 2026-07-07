@@ -8,32 +8,48 @@ import { getActualRows } from './lib/getActualRows';
 import { RevenueChart } from './components/RevenueChart';
 import { ProfitChart } from './components/ProfitChart';
 
-const PLAN_FIELDS = ['monthlyGrowth', 'currentAov', 'futureAov', 'launchMonthIndex', 'auMargin', 'usMargin', 'actuals'];
+const PLAN_FIELDS = ['monthlyGrowth', 'auCurrentAov', 'auFutureAov', 'usCurrentAov', 'usFutureAov', 'launchMonthIndex', 'auMargin', 'usMargin', 'actuals'];
 
 const STEP_CHANGE_MONTH_OPTIONS = MONTHS.map((month, index) => ({ month, index })).slice(1);
 
 const DEFAULT_SHARED_STATE = {
   monthlyGrowth: 4.8,
-  currentAov: 235,
-  futureAov: 350,
+  auCurrentAov: 235,
+  auFutureAov: 350,
+  usCurrentAov: 235,
+  usFutureAov: 350,
   launchMonthIndex: 4,
   auMargin: 8,
   usMargin: 6,
   actuals: {},
 };
 
+// Falls back to the old single shared AOV fields for shared-state/plan data saved
+// before AU and US had independent AOVs, so existing data keeps working.
+function resolveRegionAov(source) {
+  return {
+    auCurrentAov: source.auCurrentAov ?? source.currentAov ?? DEFAULT_SHARED_STATE.auCurrentAov,
+    auFutureAov: source.auFutureAov ?? source.futureAov ?? DEFAULT_SHARED_STATE.auFutureAov,
+    usCurrentAov: source.usCurrentAov ?? source.currentAov ?? DEFAULT_SHARED_STATE.usCurrentAov,
+    usFutureAov: source.usFutureAov ?? source.futureAov ?? DEFAULT_SHARED_STATE.usFutureAov,
+  };
+}
+
 function App() {
   const [shared, updateShared, isLoaded] = useSharedState(DEFAULT_SHARED_STATE);
-  const { monthlyGrowth, currentAov, futureAov, launchMonthIndex, auMargin, usMargin, actuals } = shared;
+  const resolvedShared = { ...shared, ...resolveRegionAov(shared) };
+  const { monthlyGrowth, auCurrentAov, auFutureAov, usCurrentAov, usFutureAov, launchMonthIndex, auMargin, usMargin, actuals } = resolvedShared;
   const [activeTab, setActiveTab] = useState('prediction');
   const { plans, savePlan, deletePlan, renamePlan, overwritePlan } = useSavedPlans();
   const [planName, setPlanName] = useState('');
   const [editingPlanId, setEditingPlanId] = useState(null);
   const [editingName, setEditingName] = useState('');
 
-  const data = useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex });
+  const data = useProjection({ monthlyGrowth, auCurrentAov, auFutureAov, usCurrentAov, usFutureAov, auMargin, usMargin, launchMonthIndex });
   const decData = data[data.length - 1];
   const blendedMargin = ((decData.Profit / decData.Total) * 100).toFixed(1);
+  const decAuSharePct = ((decData.AU / decData.Total) * 100).toFixed(0);
+  const decUsSharePct = ((decData.US / decData.Total) * 100).toFixed(0);
 
   const unlockedMonths = getUnlockedMonths();
   const actualRows = getActualRows(actuals);
@@ -51,7 +67,7 @@ function App() {
   const handleSavePlan = () => {
     const trimmedName = planName.trim();
     if (!trimmedName) return;
-    const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, shared[field]]));
+    const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, resolvedShared[field]]));
     const existing = plans.find((plan) => plan.name.trim().toLowerCase() === trimmedName.toLowerCase());
     if (existing) {
       if (!window.confirm(`A plan named "${existing.name}" already exists. Overwrite it?`)) return;
@@ -63,13 +79,14 @@ function App() {
   };
 
   const handleLoadPlan = (plan) => {
-    const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, plan[field]]));
+    const resolvedPlan = { ...plan, ...resolveRegionAov(plan) };
+    const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, resolvedPlan[field]]));
     updateShared(snapshot);
   };
 
   const handleUpdatePlan = (plan) => {
     if (!window.confirm(`Overwrite "${plan.name}" with the current lever settings?`)) return;
-    const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, shared[field]]));
+    const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, resolvedShared[field]]));
     overwritePlan(plan.id, snapshot);
   };
 
@@ -105,7 +122,7 @@ function App() {
           <div className="space-y-1">
             <h1 className="text-4xl font-black tracking-tight">YONA SCALE PLAN — 2026</h1>
             <p className="text-slate-500 font-medium flex items-center gap-2">
-              <Globe size={16} /> AU (60%) / US (40%) Split • Baseline: ${MARCH_REVENUE.toLocaleString()}
+              <Globe size={16} /> AU ({decAuSharePct}%) / US ({decUsSharePct}%) Split by Dec • Baseline: ${MARCH_REVENUE.toLocaleString()}
             </p>
           </div>
           <div className="text-right">
@@ -147,16 +164,31 @@ function App() {
                     <Target size={14} className="text-indigo-500" />
                     <span className="text-xs font-bold uppercase tracking-wider font-mono">AOV Step Change</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Australia AOV</p>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Pre Step-Change</p>
-                      <input type="number" value={currentAov} onChange={(e) => updateShared({ currentAov: Number(e.target.value) })} aria-label="Pre Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold" />
+                      <input type="number" value={auCurrentAov} onChange={(e) => updateShared({ auCurrentAov: Number(e.target.value) })} aria-label="Australia Pre Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold" />
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Post Step-Change</p>
-                      <input type="number" value={futureAov} onChange={(e) => updateShared({ futureAov: Number(e.target.value) })} aria-label="Post Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600" />
+                      <input type="number" value={auFutureAov} onChange={(e) => updateShared({ auFutureAov: Number(e.target.value) })} aria-label="Australia Post Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-emerald-600" />
                     </div>
                   </div>
+
+                  <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">United States AOV</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Pre Step-Change</p>
+                      <input type="number" value={usCurrentAov} onChange={(e) => updateShared({ usCurrentAov: Number(e.target.value) })} aria-label="United States Pre Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Post Step-Change</p>
+                      <input type="number" value={usFutureAov} onChange={(e) => updateShared({ usFutureAov: Number(e.target.value) })} aria-label="United States Post Step-Change Average Order Value" className="w-full bg-slate-50 border-0 rounded-lg p-2 text-sm font-bold text-blue-600" />
+                    </div>
+                  </div>
+
                   <div className="mt-4">
                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Step-Change Month</p>
                     <select
@@ -375,7 +407,16 @@ function App() {
                       </div>
                     )}
                     <p className="text-xs text-slate-400">
-                      Saved {new Date(plan.savedAt).toLocaleString()} • {plan.monthlyGrowth}% growth • ${plan.currentAov}→${plan.futureAov} AOV • AU {plan.auMargin}% / US {plan.usMargin}%
+                      {(() => {
+                        const planAov = resolveRegionAov(plan);
+                        return (
+                          <>
+                            Saved {new Date(plan.savedAt).toLocaleString()} • {plan.monthlyGrowth}% growth •
+                            {' '}AU ${planAov.auCurrentAov}→${planAov.auFutureAov} / US ${planAov.usCurrentAov}→${planAov.usFutureAov} AOV •
+                            {' '}AU {plan.auMargin}% / US {plan.usMargin}%
+                          </>
+                        );
+                      })()}
                     </p>
                   </div>
                   <div className="flex gap-2 shrink-0">

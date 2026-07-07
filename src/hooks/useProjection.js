@@ -6,27 +6,45 @@ export const LAUNCH_MONTH_INDEX = 4;
 const AU_SHARE = 0.6;
 const US_SHARE = 0.4;
 
-export function useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex = LAUNCH_MONTH_INDEX }) {
+export function useProjection({
+  monthlyGrowth,
+  auCurrentAov,
+  auFutureAov,
+  usCurrentAov,
+  usFutureAov,
+  auMargin,
+  usMargin,
+  launchMonthIndex = LAUNCH_MONTH_INDEX,
+}) {
   return useMemo(() => {
-    let lastOrders = MARCH_REVENUE / currentAov;
+    const marchAuRevenue = MARCH_REVENUE * AU_SHARE;
+    const marchUsRevenue = MARCH_REVENUE * US_SHARE;
+
+    let lastAuOrders = marchAuRevenue / auCurrentAov;
+    let lastUsOrders = marchUsRevenue / usCurrentAov;
 
     return MONTHS.map((month, index) => {
       const isActual = index === 0;
       const isPostLaunch = index >= launchMonthIndex;
 
-      let orders;
+      let auOrders;
+      let usOrders;
       if (isActual) {
-        orders = MARCH_REVENUE / currentAov;
+        auOrders = marchAuRevenue / auCurrentAov;
+        usOrders = marchUsRevenue / usCurrentAov;
       } else {
-        lastOrders = lastOrders * (1 + monthlyGrowth / 100);
-        orders = lastOrders;
+        lastAuOrders = lastAuOrders * (1 + monthlyGrowth / 100);
+        lastUsOrders = lastUsOrders * (1 + monthlyGrowth / 100);
+        auOrders = lastAuOrders;
+        usOrders = lastUsOrders;
       }
 
-      const activeAov = isPostLaunch ? futureAov : currentAov;
-      const totalRevenue = isActual ? MARCH_REVENUE : orders * activeAov;
+      const activeAuAov = isPostLaunch ? auFutureAov : auCurrentAov;
+      const activeUsAov = isPostLaunch ? usFutureAov : usCurrentAov;
 
-      const auRevenue = totalRevenue * AU_SHARE;
-      const usRevenue = totalRevenue * US_SHARE;
+      const auRevenue = isActual ? marchAuRevenue : auOrders * activeAuAov;
+      const usRevenue = isActual ? marchUsRevenue : usOrders * activeUsAov;
+      const totalRevenue = isActual ? MARCH_REVENUE : auRevenue + usRevenue;
 
       const auProfit = auRevenue * (auMargin / 100);
       const usProfit = usRevenue * (usMargin / 100);
@@ -40,5 +58,5 @@ export function useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, 
         isActual,
       };
     });
-  }, [monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex]);
+  }, [monthlyGrowth, auCurrentAov, auFutureAov, usCurrentAov, usFutureAov, auMargin, usMargin, launchMonthIndex]);
 }
