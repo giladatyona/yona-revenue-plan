@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { addDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
+import { addDoc, deleteDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db, plansCollection } from '../lib/firebase';
 
 export function useSavedPlans() {
@@ -16,6 +16,7 @@ export function useSavedPlans() {
 
   const savePlan = (name, planData) => addDoc(plansCollection, { name, savedAt: Date.now(), ...planData });
   const deletePlan = (id) => deleteDoc(doc(db, 'plans', id));
+  const renamePlan = (id, name) => updateDoc(doc(db, 'plans', id), { name });
 
-  return { plans, savePlan, deletePlan };
+  return { plans, savePlan, deletePlan, renamePlan };
 }

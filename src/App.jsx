@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp, Globe, Percent, Target, MessageSquare, Save, Library, Trash2 } from 'lucide-react';
+import { TrendingUp, Globe, Percent, Target, MessageSquare, Save, Library, Trash2, Pencil, Check, X } from 'lucide-react';
 import { useProjection, MARCH_REVENUE, MONTHS } from './hooks/useProjection';
 import { useSharedState } from './hooks/useSharedState';
 import { useSavedPlans } from './hooks/useSavedPlans';
@@ -26,8 +26,10 @@ function App() {
   const [shared, updateShared, isLoaded] = useSharedState(DEFAULT_SHARED_STATE);
   const { monthlyGrowth, currentAov, futureAov, launchMonthIndex, auMargin, usMargin, actuals } = shared;
   const [activeTab, setActiveTab] = useState('prediction');
-  const { plans, savePlan, deletePlan } = useSavedPlans();
+  const { plans, savePlan, deletePlan, renamePlan } = useSavedPlans();
   const [planName, setPlanName] = useState('');
+  const [editingPlanId, setEditingPlanId] = useState(null);
+  const [editingName, setEditingName] = useState('');
 
   const data = useProjection({ monthlyGrowth, currentAov, futureAov, auMargin, usMargin, launchMonthIndex });
   const decData = data[data.length - 1];
@@ -56,6 +58,22 @@ function App() {
   const handleLoadPlan = (plan) => {
     const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, plan[field]]));
     updateShared(snapshot);
+  };
+
+  const startEditingPlanName = (plan) => {
+    setEditingPlanId(plan.id);
+    setEditingName(plan.name);
+  };
+
+  const commitPlanRename = () => {
+    if (editingName.trim()) {
+      renamePlan(editingPlanId, editingName.trim());
+    }
+    setEditingPlanId(null);
+  };
+
+  const cancelPlanRename = () => {
+    setEditingPlanId(null);
   };
 
   if (!isLoaded) {
@@ -297,8 +315,40 @@ function App() {
             <div className="space-y-3">
               {plans.map((plan) => (
                 <div key={plan.id} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">{plan.name}</p>
+                  <div className="min-w-0">
+                    {editingPlanId === plan.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitPlanRename();
+                            if (e.key === 'Escape') cancelPlanRename();
+                          }}
+                          aria-label={`Rename plan ${plan.name}`}
+                          autoFocus
+                          className="bg-white border border-slate-200 rounded-lg p-1.5 text-sm font-bold"
+                        />
+                        <button onClick={commitPlanRename} aria-label="Confirm rename" className="text-emerald-600 hover:text-emerald-700">
+                          <Check size={16} />
+                        </button>
+                        <button onClick={cancelPlanRename} aria-label="Cancel rename" className="text-slate-400 hover:text-slate-600">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-slate-800">{plan.name}</p>
+                        <button
+                          onClick={() => startEditingPlanName(plan)}
+                          aria-label={`Rename plan ${plan.name}`}
+                          className="text-slate-300 hover:text-slate-500"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      </div>
+                    )}
                     <p className="text-xs text-slate-400">
                       Saved {new Date(plan.savedAt).toLocaleString()} • {plan.monthlyGrowth}% growth • ${plan.currentAov}→${plan.futureAov} AOV • AU {plan.auMargin}% / US {plan.usMargin}%
                     </p>
