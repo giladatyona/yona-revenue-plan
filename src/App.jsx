@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp, Globe, Percent, Target, MessageSquare, Save, Library, Trash2, Pencil, Check, X } from 'lucide-react';
+import { TrendingUp, Globe, Percent, Target, MessageSquare, Save, Library, Trash2, Pencil, Check, X, RotateCw } from 'lucide-react';
 import { useProjection, MARCH_REVENUE, MONTHS } from './hooks/useProjection';
 import { useSharedState } from './hooks/useSharedState';
 import { useSavedPlans } from './hooks/useSavedPlans';
@@ -26,7 +26,7 @@ function App() {
   const [shared, updateShared, isLoaded] = useSharedState(DEFAULT_SHARED_STATE);
   const { monthlyGrowth, currentAov, futureAov, launchMonthIndex, auMargin, usMargin, actuals } = shared;
   const [activeTab, setActiveTab] = useState('prediction');
-  const { plans, savePlan, deletePlan, renamePlan } = useSavedPlans();
+  const { plans, savePlan, deletePlan, renamePlan, overwritePlan } = useSavedPlans();
   const [planName, setPlanName] = useState('');
   const [editingPlanId, setEditingPlanId] = useState(null);
   const [editingName, setEditingName] = useState('');
@@ -49,15 +49,28 @@ function App() {
   };
 
   const handleSavePlan = () => {
-    if (!planName.trim()) return;
+    const trimmedName = planName.trim();
+    if (!trimmedName) return;
     const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, shared[field]]));
-    savePlan(planName.trim(), snapshot);
+    const existing = plans.find((plan) => plan.name.trim().toLowerCase() === trimmedName.toLowerCase());
+    if (existing) {
+      if (!window.confirm(`A plan named "${existing.name}" already exists. Overwrite it?`)) return;
+      overwritePlan(existing.id, snapshot);
+    } else {
+      savePlan(trimmedName, snapshot);
+    }
     setPlanName('');
   };
 
   const handleLoadPlan = (plan) => {
     const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, plan[field]]));
     updateShared(snapshot);
+  };
+
+  const handleUpdatePlan = (plan) => {
+    if (!window.confirm(`Overwrite "${plan.name}" with the current lever settings?`)) return;
+    const snapshot = Object.fromEntries(PLAN_FIELDS.map((field) => [field, shared[field]]));
+    overwritePlan(plan.id, snapshot);
   };
 
   const startEditingPlanName = (plan) => {
@@ -371,6 +384,14 @@ function App() {
                       className="text-xs font-bold uppercase bg-white border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-100"
                     >
                       Load
+                    </button>
+                    <button
+                      onClick={() => handleUpdatePlan(plan)}
+                      aria-label={`Update plan ${plan.name} with current settings`}
+                      title="Overwrite this plan with the current lever settings"
+                      className="text-xs font-bold uppercase bg-white border border-slate-200 rounded-lg px-3 py-2 text-indigo-500 hover:bg-indigo-50"
+                    >
+                      <RotateCw size={14} />
                     </button>
                     <button
                       onClick={() => deletePlan(plan.id)}

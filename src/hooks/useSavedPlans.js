@@ -17,6 +17,7 @@ export function useSavedPlans() {
   const savePlan = (name, planData) => addDoc(plansCollection, { name, savedAt: Date.now(), ...planData });
   const deletePlan = (id) => deleteDoc(doc(db, 'plans', id));
   const renamePlan = (id, name) => updateDoc(doc(db, 'plans', id), { name });
+  const overwritePlan = (id, planData) => updateDoc(doc(db, 'plans', id), { savedAt: Date.now(), ...planData });
 
-  return { plans, savePlan, deletePlan, renamePlan };
+  return { plans, savePlan, deletePlan, renamePlan, overwritePlan };
 }
